@@ -1,0 +1,4 @@
+pyfirmata
+numpy
+matplotlib
+thorcam
