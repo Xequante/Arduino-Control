@@ -2,3 +2,4 @@ pyfirmata
 numpy
 matplotlib
 thorcam
+nptyping

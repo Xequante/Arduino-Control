@@ -11,6 +11,7 @@ import time
 def run_experiment(recalibrate=False):
 
     # Connect to the Arduino Uno:
+    
     board = pyfirmata.Arduino('COM3')
     it = pyfirmata.util.Iterator(board)
     it.start()
@@ -28,23 +29,31 @@ def run_experiment(recalibrate=False):
     time.sleep(5)
 
     # Alignment
-    # alignment(led_pins, alternating=False)
+    alignment(led_pins, alternating=False)
     alignment(led_pins, alternating=True)
 
-    # Recalibrate if asked
-    if recalibrate:
-        calibrate_leds(show_selection=False, board=board)
+    # # Recalibrate if asked
+    # if recalibrate:
+    #     calibrate_leds(show_selection=False, board=board)
 
-    # Initialize the SDK and get a list of available cameras
-    sdk = TLCameraSDK()
-    serials = sdk.discover_available_cameras()    
+    # # Initialize the SDK and get a list of available cameras
+    # sdk = TLCameraSDK()
+    # serials = sdk.discover_available_cameras()    
 
-    # Connect to the camera
-    with sdk.open_camera(camera_serial_number=serials[0]) as cam:
-        pass
+    # # Connect to the camera
+    # with sdk.open_camera(camera_serial_number=serials[0]) as cam:
+    #     # Set properties
+    #     cam.exposure_time_us = int(10e6)
+    #     cam.gain = 30
+    #     cam.frames_per_trigger_zero_for_unlimited = 4
+    #     cam.operation_mode = OPERATION_MODE.SOFTWARE_TRIGGERED
 
-        # Line cut experiment
-        line_cut_experiment(led_pins, cam)
+    #     # Arm the camera
+    #     cam.arm(frames_to_buffer=2)
+
+    #     # Run desired experiment
+    #     comparison_experiment(led_pins, cam)
+    #     # line_cut_experiment(led_pins, cam)
 
 
 def alignment(led_pins, alternating=False):
@@ -86,15 +95,31 @@ def ratio_experiment(led_pins, cam):
     plt.show()
 
 
-def line_cut_experiment(led_pins, cam):
+def comparison_experiment(led_pins, cam, plot=True):
 
-    # Set properties
-    cam.exposure_time_us = int(10e6)
-    cam.frames_per_trigger_zero_for_unlimited = 4
-    cam.operation_mode = OPERATION_MODE.SOFTWARE_TRIGGERED
+    # Collect two sets of data
+    data_1 = line_cut_experiment(led_pins, cam, plot=False)
+    _ = input("Ready?")
+    data_2 = line_cut_experiment(led_pins, cam, plot=False)
 
-    # Arm the camera
-    cam.arm(frames_to_buffer=2)
+    # Compute ratio for each LED
+    fig, axs = plt.subplots(1, 4)
+    for i in range(4):
+        data = data_1[i] / data_2[i]
+        axs[i].plot(data)
+
+        # Save the data
+        np.save(f'resources/collected_data/led_{i+1}_thin_film.npy', data_1[i])
+        np.save(f'resources/collected_data/led_{i+1}_free_space.npy', data_2[i])
+        # np.save(f'resources/collected_data/led_{i+1}_ratio.npy', data)
+
+    # Display the plot
+    plt.show()
+
+def line_cut_experiment(led_pins, cam, plot=True):
+
+    # List for storing data
+    line_cuts = []
 
     # Collect data and plot
     fig, axs = plt.subplots(1, 4)
@@ -109,13 +134,28 @@ def line_cut_experiment(led_pins, cam):
         data = np.average(capture[600-r:600+r, :], axis=0)
         axs[i].plot(data)
         ax2rav[i].imshow(capture)
+        line_cuts.append(data)
         
 
     # Clear the board
     upload_vector(led_pins, np.zeros(4))
 
     # Show the plot
-    plt.show()
+    if plot:
+        plt.show()
+
+    # Return results
+    return line_cuts
+
+
+def take_capture_experiment(led_pins, cam):
+    for i in range(4):
+        vector = np.zeros(4)
+        vector[i] = 1
+        upload_vector(led_pins, vector)
+        time.sleep(10)
+
+    pass
 
 
 def take_capture(cam):

@@ -1,0 +1,6 @@
+{
+"terminal.integrated.env.windows": {
+    "Path": "${env:Path};C:\\Users\\Mohamed ElKabbash\\Arduino_Control\\Arduino-Control;C:\\Users\\Mohamed ElKabbash\\SLM_base\\SLM_base"
+}
+
+}
